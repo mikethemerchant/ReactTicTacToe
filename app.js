@@ -1,33 +1,40 @@
-// react tutorial
 
 import { useState } from "react";
 
 function Square({ value, onSquareClick }) {
-  return (
+  return ( // returns a button with the value and click method passed in.
     <button className="square" onClick={onSquareClick}>
       {value}
     </button>
   );
 }
 
-export default function Board() {
-  const [isX, setIsX] = useState(true);
-  const [squares, setSquares] = useState(Array(9).fill(null));
-
+function Board({ xIsNext, squares, onPlay}) {
   function handleClick(i) {
-    const nextSquares = squares.slice();
-
-    if(isX === true) {
+    if (squares[i] || calculateWinner(squares)) {
+      return; // if clicked square is already populated or already have winner then do nothing.
+    }
+    const nextSquares = squares.slice(); // make a copy of the array to be immutable
+    if (xIsNext) { // toggle between X and O 
       nextSquares[i] = "X";
     } else {
-      nextSquares[i] = "O";      
+      nextSquares[i] = "O";
     }
-    setIsX(!isX);
-    setSquares(nextSquares);
+    onPlay(nextSquares); // don't understand 
   }
 
-  return (
+  // based on the passed in squares array calculate the winner; then update status message at top with result
+  const winner = calculateWinner(squares);
+  let status;
+  if (winner) {
+    status = 'The winner is: ' + winner;
+  } else {
+    status = 'The next Next player: ' + (xIsNext ? 'X' : 'O');
+  }
+
+  return (  // here we return the status and the board made up of squares; that square is givin an index number and an onclick with method with the same index via an anonymous function created
     <>
+      <div className="status">{status}</div>
       <div className="board-row">
         <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
         <Square value={squares[1]} onSquareClick={() => handleClick(1)} />
@@ -44,5 +51,71 @@ export default function Board() {
         <Square value={squares[8]} onSquareClick={() => handleClick(8)} />
       </div>
     </>
+    );
+  }
+
+export default function Game() { // now we take it up a level and this is where I am and confused a bit.
+  const [history, setHistory] = useState([Array(9).fill(null)]); // ... create an array of boards arrays of squares...
+  const [currentMove, setCurrentMove] = useState(0);
+  const xIsNext = currentMove % 2 === 0;
+  const currentSquares = history[currentMove]; // ?
+
+  function handlePlay(nextSquares) {
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    setCurrentMove(nextHistory.length -1);
+  }
+
+  function jumpTo(nextMove) {
+    setCurrentMove(nextMove);
+  }
+
+  const moves = history.map((squares, move) => {
+    let description;
+    if (move > 0) {
+      description = 'Go to move #' + move;
+    } else {
+      description = 'Go to game start'; 
+    }
+    return (
+      <li>
+        <button onClick={() => jumpTo(move)}>{description}</button>
+      </li>
+    );
+  })
+
+  return (
+    <div className="game">
+      <div className="game-board">
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay}/>
+      </div>
+      <div className="game-info">
+        <ol>{moves}</ol>
+      </div>
+    </div>
   );
 }
+
+  function calculateWinner(squares) {  // this compares the array to one in the list and figures out winner.
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6]
+    ];
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (
+        squares[a] &&
+        squares[a] === squares[b] &&
+        squares[a] === squares[c]
+      ) {
+        return squares[a];
+      }
+    }
+    return null;
+  }
